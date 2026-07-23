@@ -1,4 +1,5 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import netlify from "@netlify/vite-plugin-tanstack-start";
 
 const preset =
   process.env.NETLIFY
@@ -8,6 +9,10 @@ const preset =
       : undefined;
 
 export default defineConfig({
+  plugins: [
+    netlify(),
+  ],
+
   nitro: preset
     ? {
         preset,
