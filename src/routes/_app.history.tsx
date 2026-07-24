@@ -7,6 +7,7 @@ import { OutageList } from "@/components/outage/OutageList";
 import { useEffect, useState } from "react";
 import { HistoryFilters } from "@/components/outage/HistoryFilters";
 import { HistoricalPowerPattern } from "@/components/outage/HistoricalPowerPattern";
+import { loadSavedPowerLocation } from "@/lib/outage/locationStorage";
 
 const REPORTS_PER_PAGE = 12;
 
@@ -22,12 +23,16 @@ export const Route = createFileRoute("/_app/history")({
 function HistoryPage() {
   const { data } = useSuspenseQuery(outagesQO);
 
+  const savedLocation = loadSavedPowerLocation();
+
   const [visibleCount, setVisibleCount] = useState(REPORTS_PER_PAGE);
 
   const [search, setSearch] = useState("");
   const [disco, setDisco] = useState("");
   const [status, setStatus] = useState("");
   const [date, setDate] = useState("");
+
+  const hasActiveFilters = search.trim() !== "" || disco !== "" || status !== "" || date !== "";
 
   const clearFilters = () => {
     setSearch("");
@@ -41,16 +46,12 @@ function HistoryPage() {
   }, [search, disco, status, date]);
 
   const discos = Array.from(
-  new Set(
-    data.outages.map((outage: Outage) => outage.discoCode),
-  ),
-) as string[];
+    new Set(data.outages.map((outage: Outage) => outage.discoCode)),
+  ) as string[];
 
   const statuses = Array.from(
-  new Set(
-    data.outages.map((outage: Outage) => outage.status),
-  ),
-) as string[];
+    new Set(data.outages.map((outage: Outage) => outage.status)),
+  ) as string[];
 
   const filteredReports = data.outages.filter((outage: Outage) => {
     const matchesSearch = outage.area.toLowerCase().includes(search.toLowerCase());
@@ -64,7 +65,16 @@ function HistoryPage() {
     return matchesSearch && matchesDisco && matchesStatus && matchesDate;
   });
 
-  const reportsForAnalytics = filteredReports.length > 0 ? filteredReports : data.outages;
+  const defaultAnalyticsReports = savedLocation
+    ? data.outages.filter((outage: Outage) => {
+        return (
+          outage.area.trim().toLowerCase() === savedLocation.area.trim().toLowerCase() &&
+          outage.discoCode === savedLocation.discoCode
+        );
+      })
+    : data.outages;
+
+  const reportsForAnalytics = hasActiveFilters ? filteredReports : defaultAnalyticsReports;
 
   const visibleReports = filteredReports.slice(0, visibleCount);
 
@@ -96,9 +106,7 @@ function HistoryPage() {
         </Link>
 
         <div className="space-y-2">
-         <h1 className="text-2xl font-bold sm:text-3xl">
-            Community Report History
-          </h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Community Report History</h1>
 
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
             Browse previous community reports submitted across Nigeria.
@@ -132,9 +140,12 @@ function HistoryPage() {
         </GlassCard>
       </div>
 
-      <HistoricalPowerPattern outages={reportsForAnalytics} />
+      <HistoricalPowerPattern
+        outages={reportsForAnalytics}
+        areaName={hasActiveFilters ? filteredReports[0]?.area : savedLocation?.area}
+        discoCode={hasActiveFilters ? filteredReports[0]?.discoCode : savedLocation?.discoCode}
+      />
 
-      
       <HistoryFilters
         search={search}
         onSearchChange={setSearch}
@@ -148,7 +159,6 @@ function HistoryPage() {
         date={date}
         onDateChange={setDate}
       />
-
 
       <OutageList
         outages={visibleReports}

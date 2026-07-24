@@ -6,9 +6,11 @@ import { SectionHeader } from "@/components/common/SectionHeader";
 
 type Props = {
   outages: Outage[];
+  areaName?: string;
+  discoCode?: string;
 };
 
-export function HistoricalPowerPattern({ outages }: Props) {
+export function HistoricalPowerPattern({ outages, areaName, discoCode }: Props) {
   const analytics = analyzePowerAvailability(outages);
 
   const { periods, strongestPeriod, totalReports, overallAvailability } = analytics;
@@ -33,7 +35,13 @@ export function HistoricalPowerPattern({ outages }: Props) {
           icon={BarChart3}
           badge="Community Power Analytics"
           title="Historical Power Pattern"
-          description="Based on confirmed community reports from the last 30 days."
+          description={
+            areaName
+              ? `Based on confirmed community reports from ${areaName}${
+                  discoCode ? ` (${discoCode})` : ""
+                } from the last 30 days.`
+              : "Based on confirmed community reports from the last 30 days."
+          }
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
